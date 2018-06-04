@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    <flow name="esbdomaintestFlow">
+        <http:listener config-ref="reltioserviceapi-httpListenerConfig" path="/esbdomaintest" doc:name="HTTP"/>
+        <json:validate-schema schemaLocation="CompanySchema.json" doc:name="Validate JSON Schema"/>
+        <set-variable variableName="BATCHID" value="#['151']" doc:name="BATCHID"/>
+<!--         <set-variable variableName="Source_Id" value="#[message.inboundProperties.'http.query.params'.Source_Id]" doc:name="Source_Id"/>
+        <set-payload value="#[
+['Source_System':'RMNTest', 'Source_Id':flowVars.Source_Id, 'Batch_Id':'151',  'Reporting_Name':'RMNReportingName1', 'LegalName':flowVars.NULLValue]
+]" doc:name="Set Payload"/>
+ -->        <dw:transform-message doc:name="Transform Message" metadata:id="7607ebc0-7a77-4032-9d69-3d70a89f1962">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java skipNullOn="everywhere"
+---
+{
+Source_System:payload.sourceIdentifier[0].sourceSystem, 
+Source_Id:payload.sourceIdentifier[0].id, 
+Batch_Id:flowVars.BATCHID,  
+(payload.names map {
+	(Reporting_Name: $.name) when $.type == "Reporting Name", 
+	(Legal_Name: $.name) when $.type == "Legal Name",
+	(Doing_Business_As_Name: $.name) when $.type == "Doing Business As"
+}),
+(payload.dunsNumbers map {
+	(DUNS_Number: $.id) when $.type == "DUNS Number",
+	(Domestic_Ultimate_DUNS: $.id) when $.type == "Domestic Ultimate DUNS number",
+	(Headquarter_DUNS: $.id) when $.type == "Headquarter DUNS number",
+	(Parent_DUNS: $.id) when $.type == "Parent DUNS number",
+	(Global_Ultimate_DUNS: $.id) when $.type == "Global Ultimate DUNS number"
+}),
+Phys_Address_Line1: payload.address.physicaladdress.addressLine1,
+Phys_Address_Line2: payload.address.physicaladdress.addressLine2,
+Phys_City: payload.address.physicaladdress.city,
+Phys_State_Province: payload.address.physicaladdress.stateProvince,
+Phys_Zip: payload.address.physicaladdress.zip.zip5,
+Phys_Country: payload.address.physicaladdress.country,
+Phys_Building: payload.address.physicaladdress.building,
+Phys_Street: payload.address.physicaladdress.street,
+(Mail_Address_Line1: payload.address.mailingaddress.addressLine1) when payload.address.mailingaddress !=null,
+(Mail_Address_Line2: payload.address.mailingaddress.addressLine2) when payload.address.mailingaddress !=null,
+(Mail_City: payload.address.mailingaddress.city) when payload.address.mailingaddress !=null,
+(Mail_State_Province: payload.address.mailingaddress.stateProvince) when payload.address.mailingaddress !=null,
+(Mail_Zip: payload.address.mailingaddress.zip.zip5) when payload.address.mailingaddress !=null,
+(Mail_Country: payload.address.mailingaddress.country) when payload.address.mailingaddress !=null,
+(Mail_Building: payload.address.mailingaddress.building) when payload.address.mailingaddress !=null,
+(Mail_Street: payload.address.mailingaddress.street) when payload.address.mailingaddress !=null,
+Established_Date: payload.establishedDate,
+Total_Employee_Count: payload.totalEmployeeCount,
+Estimated_Annual_Revenue: payload.estimatedAnnualRevenue,
+Currency_Type_Code: payload.currencyTypeCode,
+Public_Private_Indicator: payload.publicPrivateIndicator,
+Small_Business_Indicator: payload.smallBusinessIndicator,
+Local_Employee_Count: payload.localEmployeeCount,
+Minority_Owned_Indicator: payload.minorityOwnIndicator,
+Minority_Type: payload.minorityType,
+Women_Owned_Indicator: payload.womenOwnedIndicator
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <db:insert config-ref="MIP_DB" doc:name="Database">
+            <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Organization (Source_System, Source_Id, Batch_Id, 
+Reporting_Name, Legal_Name, Doing_Business_As_Name,
+DUNS_Number, Domestic_Ultimate_DUNS, Headquarter_DUNS, Parent_DUNS, Global_Ultimate_DUNS
+)
+Values (#[payload.Source_System], #[payload.Source_Id],#[payload.Batch_Id],
+#[payload.Reporting_Name], #[payload.Legal_Name],#[payload.Doing_Business_As_Name],
+#[payload.DUNS_Number],#[payload.Domestic_Ultimate_DUNS],#[payload.Headquarter_DUNS],#[payload.Parent_DUNS],#[payload.Global_Ultimate_DUNS])]]></db:parameterized-query>
+
+
+        </db:insert>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <logger level="INFO" doc:name="Logger"/>
+    </flow>
+</mule>
