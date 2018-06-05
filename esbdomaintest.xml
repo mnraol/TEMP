@@ -19,7 +19,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 ]" doc:name="Set Payload"/>
  -->        <dw:transform-message doc:name="Transform Message" metadata:id="7607ebc0-7a77-4032-9d69-3d70a89f1962">
             <dw:input-payload mimeType="application/json"/>
-            <dw:set-payload><![CDATA[%dw 1.0
+            <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
 %output application/java skipNullOn="everywhere"
 ---
 {
@@ -63,8 +63,56 @@ Small_Business_Indicator: payload.smallBusinessIndicator,
 Local_Employee_Count: payload.localEmployeeCount,
 Minority_Owned_Indicator: payload.minorityOwnIndicator,
 Minority_Type: payload.minorityType,
-Women_Owned_Indicator: payload.womenOwnedIndicator
-}]]></dw:set-payload>
+Women_Owned_Indicator: payload.womenOwnedIndicator,
+Legal_Status_Code: payload.legalStatusCode,
+Manufacturing_Indicator: payload.manufacturingIndicator,
+Subsidiary_Indicator: payload.subsidiaryIndicator,
+Website_URL: payload.websiteURL
+}]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Org_Phone"><![CDATA[%dw 1.0
+%output application/java skipNullOn="everywhere"
+---
+payload.phone map (phone, index) -> {
+	Source_System:payload.sourceIdentifier[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifier[0].id, 
+	Phone_Type: $.type,
+	Area_Code: $.areaCode,
+	Number: $.number,
+	(Country_Code: $.countryCode ) when $.countryCode != null,
+	(Extension: $.extension) when $.extension != null,
+	(Exchange: $.exchangeNumber) when $.exchangeNumber != null,
+	(Standard_Indicator: $.standardIndicator) when $.standardIndicator != null
+}]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Org_Identifier"><![CDATA[%dw 1.0
+%output application/java skipNullOn="everywhere"
+---
+{
+(payload.dunsNumbers map {
+	Source_System:payload.sourceIdentifier[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifier[0].id, 
+	Identifier_Type: $.type match {
+		"DUNS Number" -> "DUNS Name",	
+		"Domestic Ultimate DUNS number" -> "Domestic Ultimate DUNS Name",
+		"Headquarter DUNS number" -> "Headquarter DUNS Name",
+		"Parent DUNS number" -> "Parent DUNS Name",
+		"Global Ultimate DUNS number" -> "Global Ultimate DUNS Name"
+	},
+	Identifier_Value: $.Name,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: "",
+	Identifier_Desc: ""
+}),
+(payload.contractNumber map {
+	Source_System:payload.sourceIdentifier[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifier[0].id, 
+	Identifier_Type: "Contract Number",
+	Identifier_Value: $.number,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: $.sourceSystem,
+	Identifier_Desc: ""
+})
+}]]></dw:set-variable>
+
         </dw:transform-message>
         <db:insert config-ref="MIP_DB" doc:name="Database">
             <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Organization (Source_System, Source_Id, Batch_Id, 
