@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "type": "object",
+  "properties": {
+    "address": {
+      "type": "object",
+      "properties": {
+        "physicaladdress": {
+          "type": "array",
+          "items": {
+            "$ref": "Definations.json#/definitions/address_def"
+          }
+        },
+        "mailingaddress": {
+          "type": "array",
+          "items": {
+            "$ref": "Definations.json#/definitions/address_def"
+          }
+        },
+		"required": [
+	    	"physicaladdress"
+	  	]
+    
+      }
+    },
+    "establishedDate": {
+      "type": "string"
+    },
+    "totalEmployeeCount": {
+      "type": "number"
+    },
+    "estimatedAnnualRevenue": {
+      "type": "number"
+    },
+    "currencyTypeCode": {
+      "type": "string"
+    },
+    "publicPrivateIndicator": {
+      "type": "string"
+    },
+    "smallBusinessIndicator": {
+      "type": "string"
+    },
+    "localEmployeeCount": {
+      "type": "number"
+    },
+    "minorityOwnIndicator": {
+      "type": "string"
+    },
+    "minorityType": {
+      "type": "string"
+    },
+    "womenOwnedIndicator": {
+      "type": "string"
+    },
+    "facility": {
+      "$ref": "Definations.json#/definitions/facility_def"
+    },
+    "legalStatusCode": {
+      "type": "string"
+    },
+    "manufacturingIndicator": {
+      "type": "string"
+    },
+    "subsidiaryIndicator": {
+      "type": "string"
+    },
+    "dunsLocationTypeCode": {
+      "type": "string"
+    },
+    "websiteURL": {
+      "type": "string"
+    },
+    "eid": {
+      "type": "string"
+    },
+    "taxid": {
+      "type": "string"
+    },
+    "companyGroup": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/companyGroup_def"
+      }
+    },
+    "contractNumber": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/contractNumber_def"
+      }
+    },
+    "identifier": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/identifier_def"
+      }
+    },
+    "dunsNumbers": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/dunsNumber_def"
+      }
+    },
+    "industry": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/industry_def"
+      }
+    },
+    "names": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/name_def"
+      }
+    },
+    "phone": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/phone_def"
+      }
+    },
+    "sourceIdentifier": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/sourceIdentifier_def"
+      }
+    },
+    "hierarchy": {
+      "type": "array",
+      "items": {
+        "$ref": "Definations.json#/definitions/hierarchy_def"
+      }
+    }
+  },
+  "required": [
+    "sourceIdentifier", "names", "address"
+  ],
+  "additionalProperties": false
+}
