@@ -1,0 +1,296 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "definitions": {
+    "address_def": {
+      "type": "object",
+      "properties": {
+        "addressLine1": {
+          "type": "string"
+        },
+        "addressLine2": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "stateProvince": {
+          "type": "string"
+        },
+        "zip": {
+          "type": "object",
+          "properties": {
+            "zip5": {
+              "type": "string"
+            }
+          }
+        },
+        "country": {
+          "type": "string"
+        },
+        "geoLocation": {
+          "type": "object",
+          "properties": {
+            "latitude": {
+              "type": "string"
+            },
+            "logitude": {
+              "type": "string"
+            }
+          }
+        },
+        "building": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "addressLine1", "city", "stateProvince", "zip", "country"
+      ],
+      "additionalProperties": false
+    },
+    "facility_def": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "typeCode": {
+          "type": "string"
+        },
+        "typeDesc": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "typeCode",
+        "typeDesc"
+      ],
+      "additionalProperties": false
+    },
+    "contractNumber_def": {
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string"
+        },
+        "sourceSystem": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "number",
+        "sourceSystem"
+      ],
+      "additionalProperties": false
+    },
+    "identifier_def": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "sourceSystem": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "sourceSystem",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "dunsNumber_def": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "DUNS Number",
+            "Domestic Ultimate DUNS number",
+            "Headquarter DUNS number",
+            "Parent DUNS number",
+            "Global Ultimate DUNS number"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "Name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "industry_def": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "id",
+        "description",
+        "sourceType"
+      ],
+      "additionalProperties": false
+    },
+    "name_def": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "Legal Name",
+            "Reporting Name",
+            "Doing Business As"
+          ]
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "phone_def": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "Business FAX",
+            "Business Telephone"
+          ]
+        },
+        "countryCode": {
+          "type": "string"
+        },
+        "areaCode": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "extension": {
+          "type": "string"
+        },
+        "exchangeNumber": {
+          "type": "string"
+        },
+        "standardIndicator": {
+          "type": "string"
+        },
+        "sourceType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "areaCode",
+        "number"
+      ],
+      "additionalProperties": false
+    },
+    "sourceIdentifier_def": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "sourceSystem": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "sourceSystem"
+      ],
+      "additionalProperties": false
+    },
+    "hierarchy_def": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "eid": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "eid",
+        "name"
+      ]
+    },
+    "companyGroup_def": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "exception_def": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "searchCompanyRequest_Def": {
+      "type": "object",
+      "properties": {
+        "param": {
+          "type": "string",
+           "enum": ["Name", "AddressLine1", "City", "State", "Zip", "sourceCode","sourceId"]
+        },
+        "value": {
+          "type": "string"
+        },
+        "rule": {
+          "type": "string",
+          "enum": ["equals","fullText","startsWith","notequals","regexp","contains","in"]
+        }
+      },
+      "required": ["param","value","rule"],
+      "additionalProperties": false
+    }
+  }    
+}
