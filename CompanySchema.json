@@ -16,12 +16,11 @@
           "items": {
             "$ref": "Definations.json#/definitions/address_def"
           }
-        },
-		"required": [
-	    	"physicaladdress"
-	  	]
-    
-      }
+        }
+      },
+      "required": [
+        "physicaladdress"
+      ]
     },
     "establishedDate": {
       "type": "string"
@@ -133,7 +132,9 @@
     }
   },
   "required": [
-    "sourceIdentifier", "names", "address"
+    "sourceIdentifier",
+    "names",
+    "address"
   ],
   "additionalProperties": false
 }
