@@ -20,7 +20,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
  -->        <dw:transform-message doc:name="Transform Message" metadata:id="7607ebc0-7a77-4032-9d69-3d70a89f1962">
             <dw:input-payload mimeType="application/json"/>
             <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
-%output application/java skipNullOn="everywhere"
+%output application/java
 ---
 {
 Source_System:payload.sourceIdentifier[0].sourceSystem, 
@@ -70,21 +70,21 @@ Subsidiary_Indicator: payload.subsidiaryIndicator,
 Website_URL: payload.websiteURL
 }]]></dw:set-variable>
             <dw:set-variable variableName="STD_Org_Phone"><![CDATA[%dw 1.0
-%output application/java skipNullOn="everywhere"
+%output application/java
 ---
-payload.phone map (phone, index) -> {
+payload.phone map {
 	Source_System:payload.sourceIdentifier[0].sourceSystem, 
 	Source_Id:payload.sourceIdentifier[0].id, 
 	Phone_Type: $.type,
 	Area_Code: $.areaCode,
 	Number: $.number,
-	(Country_Code: $.countryCode ) when $.countryCode != null,
+	(Country_Code: $.countryCode) when $.countryCode != null,
 	(Extension: $.extension) when $.extension != null,
 	(Exchange: $.exchangeNumber) when $.exchangeNumber != null,
 	(Standard_Indicator: $.standardIndicator) when $.standardIndicator != null
 }]]></dw:set-variable>
             <dw:set-variable variableName="STD_Org_Identifier"><![CDATA[%dw 1.0
-%output application/java skipNullOn="everywhere"
+%output application/java
 ---
 {
 (payload.dunsNumbers map {
@@ -99,7 +99,7 @@ payload.phone map (phone, index) -> {
 	},
 	Identifier_Value: $.Name,
 	Batch_Id: flowVars.BATCHID,
-	Identifier_Source_System: "",
+	Identifier_Source_System: payload.sourceIdentifier[0].sourceSystem,
 	Identifier_Desc: ""
 }),
 (payload.contractNumber map {
@@ -110,6 +110,24 @@ payload.phone map (phone, index) -> {
 	Batch_Id: flowVars.BATCHID,
 	Identifier_Source_System: $.sourceSystem,
 	Identifier_Desc: ""
+}),
+(payload.industry map {
+	Source_System:payload.sourceIdentifier[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifier[0].id, 
+	Identifier_Type: $.code,
+	Identifier_Value: $.id,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: $.sourceType,
+	Identifier_Desc: $.description
+}),
+(payload.identifier map {
+	Source_System:payload.sourceIdentifier[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifier[0].id, 
+	Identifier_Type: $.type,
+	Identifier_Value: $.id,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: $.sourceSystem,
+	Identifier_Desc: $.description
 })
 }]]></dw:set-variable>
 
