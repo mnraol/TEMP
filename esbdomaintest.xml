@@ -86,7 +86,7 @@ payload.phone map {
             <dw:set-variable variableName="STD_Org_Identifier"><![CDATA[%dw 1.0
 %output application/java
 ---
-{
+flatten [
 (payload.dunsNumbers map {
 	Source_System:payload.sourceIdentifier[0].sourceSystem, 
 	Source_Id:payload.sourceIdentifier[0].id, 
@@ -129,7 +129,7 @@ payload.phone map {
 	Identifier_Source_System: $.sourceSystem,
 	Identifier_Desc: $.description
 })
-}]]></dw:set-variable>
+]]]></dw:set-variable>
 
         </dw:transform-message>
         <db:insert config-ref="MIP_DB" doc:name="Database">
