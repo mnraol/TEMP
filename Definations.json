@@ -90,7 +90,14 @@
       "type": "object",
       "properties": {
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum":[
+          	"CRM ID",
+          	"Customer Segment Number",
+          	"DUNS Location Type Code",
+          	"Parent ID Match",
+          	"Tax Identification Number"
+          ]
         },
         "sourceSystem": {
           "type": "string"
@@ -139,7 +146,12 @@
       "type": "object",
       "properties": {
         "code": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "8 digit SIC Code",
+            "Major Industry Code",
+            "NAICS"
+          ]
         },
         "id": {
           "type": "string"
