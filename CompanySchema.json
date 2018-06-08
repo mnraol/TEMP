@@ -6,15 +6,15 @@
       "type": "object",
       "properties": {
         "physicaladdress": {
-          "type": "array",
+          "type": "object",
           "items": {
-            "$ref": "Definations.json#/definitions/address_def"
+            "$ref": "Definitions.json#/definitions/address_def"
           }
         },
         "mailingaddress": {
-          "type": "array",
+          "type": "object",
           "items": {
-            "$ref": "Definations.json#/definitions/address_def"
+            "$ref": "Definitions.json#/definitions/address_def"
           }
         }
       },
@@ -53,7 +53,7 @@
       "type": "string"
     },
     "facility": {
-      "$ref": "Definations.json#/definitions/facility_def"
+      "$ref": "Definitions.json#/definitions/facility_def"
     },
     "legalStatusCode": {
       "type": "string"
@@ -79,55 +79,55 @@
     "companyGroup": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/companyGroup_def"
+        "$ref": "Definitions.json#/definitions/companyGroup_def"
       }
     },
     "contractNumber": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/contractNumber_def"
+        "$ref": "Definitions.json#/definitions/contractNumber_def"
       }
     },
     "identifier": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/identifier_def"
+        "$ref": "Definitions.json#/definitions/identifier_def"
       }
     },
     "dunsNumbers": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/dunsNumber_def"
+        "$ref": "Definitions.json#/definitions/dunsNumber_def"
       }
     },
     "industry": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/industry_def"
+        "$ref": "Definitions.json#/definitions/industry_def"
       }
     },
     "names": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/name_def"
+        "$ref": "Definitions.json#/definitions/name_def"
       }
     },
     "phone": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/phone_def"
+        "$ref": "Definitions.json#/definitions/phone_def"
       }
     },
     "sourceIdentifier": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/sourceIdentifier_def"
+        "$ref": "Definitions.json#/definitions/sourceIdentifier_def"
       }
     },
     "hierarchy": {
       "type": "array",
       "items": {
-        "$ref": "Definations.json#/definitions/hierarchy_def"
+        "$ref": "Definitions.json#/definitions/hierarchy_def"
       }
     }
   },
