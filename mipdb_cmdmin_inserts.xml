@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+    <flow name="STD_Organization_Insert">
+        <set-payload value="#[flowVars.STD_Organization]" doc:name="Set Payload"/>
+        <db:insert config-ref="MIP_DB" doc:name="STD_Organization">
+            <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Organization (Source_System, Source_Id, Batch_Id, Reporting_Name, Legal_Name, Doing_Business_As_Name,
+DUNS_Number, Domestic_Ultimate_DUNS, Headquarter_DUNS, Parent_DUNS, Global_Ultimate_DUNS,
+Phys_Address_Line1, Phys_Address_Line2, Phys_City, Phys_State_Province, Phys_Zip, Phys_Country, Phys_Building, Phys_Street,
+Mail_Address_Line1, Mail_Address_Line2, Mail_City, Mail_State_Province, Mail_Zip, Mail_Country, Mail_Building, Mail_Street,
+Established_Date, Total_Employee_Count,
+Estimated_Annual_Revenue, Currency_Type_Code, Public_Private_Indicator, Small_Business_Indicator, 
+Local_Employee_Count, Minority_Owned_Indicator, Minority_Type, Women_Owned_Indicator, 
+Legal_Status_Code, Manufacturing_Indicator, Subsidiary_Indicator, Website_URL)
+Values (
+#[payload.Source_System], #[payload.Source_Id], #[payload.Batch_Id], #[payload.Reporting_Name], #[payload.Legal_Name], #[payload.Doing_Business_As_Name],
+#[payload.DUNS_Number], #[payload.Domestic_Ultimate_DUNS], #[payload.Headquarter_DUNS], #[payload.Parent_DUNS], #[payload.Global_Ultimate_DUNS],
+#[payload.Phys_Address_Line1], #[payload.Phys_Address_Line2], #[payload.Phys_City], #[payload.Phys_State_Province], #[payload.Phys_Zip], #[payload.Phys_Country], #[payload.Phys_Building], #[payload.Phys_Street],
+#[payload.Mail_Address_Line1], #[payload.Mail_Address_Line2], #[payload.Mail_City], #[payload.Mail_State_Province], #[payload.Mail_Zip], #[payload.Mail_Country], #[payload.Mail_Building], #[payload.Mail_Street],
+#[payload.Established_Date], #[payload.Total_Employee_Count],
+#[payload.Estimated_Annual_Revenue], #[payload.Currency_Type_Code], #[payload.Public_Private_Indicator], #[payload.Small_Business_Indicator], #[payload.Local_Employee_Count], #[payload.Minority_Owned_Indicator], #[payload.Minority_Type], #[payload.Women_Owned_Indicator], 
+#[payload.Legal_Status_Code], #[payload.Manufacturing_Indicator], #[payload.Subsidiary_Indicator], #[payload.Website_URL])]]></db:parameterized-query>
+        </db:insert>
+    </flow>
+    <flow name="STD_Org_Identifier_Insert">
+        <set-payload value="#[flowVars.STD_Org_Identifier]" doc:name="Set Payload"/>
+        <db:insert config-ref="MIP_DB" bulkMode="true" doc:name="STD_Org_Identifier">
+            <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Org_Identifier (Source_System, Source_Id, Batch_Id, 
+Identifier_Type, Identifier_Value, Identifier_Source_System, Identifier_Desc)
+Values (#[payload.Source_System], #[payload.Source_Id],#[payload.Batch_Id],
+#[payload.Identifier_Type], #[payload.Identifier_Value],#[payload.Identifier_Source_System],#[payload.Identifier_Desc])]]></db:parameterized-query>
+        </db:insert>
+    </flow>
+    <flow name="STD_Org_Phone_Insert">
+        <set-payload value="#[flowVars.STD_Org_Phone]" doc:name="Set Payload"/>
+        <db:insert config-ref="MIP_DB" bulkMode="true" doc:name="STD_Org_Phone">
+            <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Org_Phone (Source_System, Source_Id, Batch_Id, 
+Phone_Type, Country_Code, Area_Code, Exchange, Number, Extension, Standard_Indicator)
+Values (#[payload.Source_System],#[payload.Source_Id],#[payload.Batch_Id],
+#[payload.Phone_Type],#[payload.Country_Code],#[payload.Area_Code],#[payload.Exchange],#[payload.Number],
+#[payload.Extension],#[payload.Standard_Indicator])]]></db:parameterized-query>
+        </db:insert>
+    </flow>
+</mule>
