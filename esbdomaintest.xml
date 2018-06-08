@@ -19,62 +19,13 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 ]" doc:name="Set Payload"/>
  -->        <dw:transform-message doc:name="Transform Message" metadata:id="7607ebc0-7a77-4032-9d69-3d70a89f1962">
             <dw:input-payload mimeType="application/json"/>
-            <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
-%output application/java
----
-{
-Source_System:payload.sourceIdentifier[0].sourceSystem, 
-Source_Id:payload.sourceIdentifier[0].id, 
-Batch_Id:flowVars.BATCHID,  
-(payload.names map {
-	(Reporting_Name: $.name) when $.type == "Reporting Name", 
-	(Legal_Name: $.name) when $.type == "Legal Name",
-	(Doing_Business_As_Name: $.name) when $.type == "Doing Business As"
-}),
-(payload.dunsNumbers map {
-	(DUNS_Number: $.id) when $.type == "DUNS Number",
-	(Domestic_Ultimate_DUNS: $.id) when $.type == "Domestic Ultimate DUNS number",
-	(Headquarter_DUNS: $.id) when $.type == "Headquarter DUNS number",
-	(Parent_DUNS: $.id) when $.type == "Parent DUNS number",
-	(Global_Ultimate_DUNS: $.id) when $.type == "Global Ultimate DUNS number"
-}),
-Phys_Address_Line1: payload.address.physicaladdress.addressLine1,
-Phys_Address_Line2: payload.address.physicaladdress.addressLine2,
-Phys_City: payload.address.physicaladdress.city,
-Phys_State_Province: payload.address.physicaladdress.stateProvince,
-Phys_Zip: payload.address.physicaladdress.zip.zip5,
-Phys_Country: payload.address.physicaladdress.country,
-Phys_Building: payload.address.physicaladdress.building,
-Phys_Street: payload.address.physicaladdress.street,
-(Mail_Address_Line1: payload.address.mailingaddress.addressLine1) when payload.address.mailingaddress !=null,
-(Mail_Address_Line2: payload.address.mailingaddress.addressLine2) when payload.address.mailingaddress !=null,
-(Mail_City: payload.address.mailingaddress.city) when payload.address.mailingaddress !=null,
-(Mail_State_Province: payload.address.mailingaddress.stateProvince) when payload.address.mailingaddress !=null,
-(Mail_Zip: payload.address.mailingaddress.zip.zip5) when payload.address.mailingaddress !=null,
-(Mail_Country: payload.address.mailingaddress.country) when payload.address.mailingaddress !=null,
-(Mail_Building: payload.address.mailingaddress.building) when payload.address.mailingaddress !=null,
-(Mail_Street: payload.address.mailingaddress.street) when payload.address.mailingaddress !=null,
-Established_Date: payload.establishedDate,
-Total_Employee_Count: payload.totalEmployeeCount,
-Estimated_Annual_Revenue: payload.estimatedAnnualRevenue,
-Currency_Type_Code: payload.currencyTypeCode,
-Public_Private_Indicator: payload.publicPrivateIndicator,
-Small_Business_Indicator: payload.smallBusinessIndicator,
-Local_Employee_Count: payload.localEmployeeCount,
-Minority_Owned_Indicator: payload.minorityOwnIndicator,
-Minority_Type: payload.minorityType,
-Women_Owned_Indicator: payload.womenOwnedIndicator,
-Legal_Status_Code: payload.legalStatusCode,
-Manufacturing_Indicator: payload.manufacturingIndicator,
-Subsidiary_Indicator: payload.subsidiaryIndicator,
-Website_URL: payload.websiteURL
-}]]></dw:set-variable>
             <dw:set-variable variableName="STD_Org_Phone"><![CDATA[%dw 1.0
 %output application/java
 ---
 payload.phone map {
 	Source_System:payload.sourceIdentifier[0].sourceSystem, 
 	Source_Id:payload.sourceIdentifier[0].id, 
+	Batch_Id: flowVars.BATCHID,
 	Phone_Type: $.type,
 	Area_Code: $.areaCode,
 	Number: $.number,
@@ -87,7 +38,7 @@ payload.phone map {
 %output application/java
 ---
 flatten [
-(payload.dunsNumbers map {
+(payload.dunsNumbers filter ($.Name != null) map {
 	Source_System:payload.sourceIdentifier[0].sourceSystem, 
 	Source_Id:payload.sourceIdentifier[0].id, 
 	Identifier_Type: $.type match {
@@ -101,7 +52,7 @@ flatten [
 	Batch_Id: flowVars.BATCHID,
 	Identifier_Source_System: payload.sourceIdentifier[0].sourceSystem,
 	Identifier_Desc: ""
-}),
+}) ,
 (payload.contractNumber map {
 	Source_System:payload.sourceIdentifier[0].sourceSystem, 
 	Source_Id:payload.sourceIdentifier[0].id, 
@@ -130,19 +81,61 @@ flatten [
 	Identifier_Desc: $.description
 })
 ]]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+Source_System:payload.sourceIdentifier[0].sourceSystem, 
+Source_Id:payload.sourceIdentifier[0].id, 
+Batch_Id:flowVars.BATCHID,  
+(payload.names map {
+	(Reporting_Name: $.name) when $.type == "Reporting Name", 
+	(Legal_Name: $.name) when $.type == "Legal Name",
+	(Doing_Business_As_Name: $.name) when $.type == "Doing Business As"
+}),
+(payload.dunsNumbers map {
+	(DUNS_Number: $.id) when $.type == "DUNS Number",
+	(Domestic_Ultimate_DUNS: $.id) when $.type == "Domestic Ultimate DUNS number",
+	(Headquarter_DUNS: $.id) when $.type == "Headquarter DUNS number",
+	(Parent_DUNS: $.id) when $.type == "Parent DUNS number",
+	(Global_Ultimate_DUNS: $.id) when $.type == "Global Ultimate DUNS number"
+}),
+Phys_Address_Line1: payload.address.physicaladdress.addressLine1,
+(Phys_Address_Line2: payload.address.physicaladdress.addressLine2) when payload.address.physicaladdress.addressLine2 != null,
+Phys_City: payload.address.physicaladdress.city,
+Phys_State_Province: payload.address.physicaladdress.stateProvince,
+Phys_Zip: payload.address.physicaladdress.zip.zip5,
+Phys_Country: payload.address.physicaladdress.country,
+(Phys_Building: payload.address.physicaladdress.building) when payload.address.physicaladdress.building != null,
+(Phys_Street: payload.address.physicaladdress.street) when payload.address.physicaladdress.street != null,
+(Mail_Address_Line1: payload.address.mailingaddress.addressLine1) when payload.address.mailingaddress !=null,
+(Mail_Address_Line2: payload.address.mailingaddress.addressLine2) when payload.address.mailingaddress.addressLine2 !=null,
+(Mail_City: payload.address.mailingaddress.city) when payload.address.mailingaddress !=null,
+(Mail_State_Province: payload.address.mailingaddress.stateProvince) when payload.address.mailingaddress !=null,
+(Mail_Zip: payload.address.mailingaddress.zip.zip5) when payload.address.mailingaddress !=null,
+(Mail_Country: payload.address.mailingaddress.country) when payload.address.mailingaddress !=null,
+(Mail_Building: payload.address.mailingaddress.building) when payload.address.mailingaddress.building !=null,
+(Mail_Street: payload.address.mailingaddress.street) when payload.address.mailingaddress.street !=null,
+(Established_Date: payload.establishedDate) when payload.establishedDate != null,
+(Total_Employee_Count: payload.totalEmployeeCount) when payload.totalEmployeeCount != null,
+(Estimated_Annual_Revenue: payload.estimatedAnnualRevenue) when payload.estimatedAnnualRevenue != null,
+(Currency_Type_Code: payload.currencyTypeCode) when payload.currencyTypeCode != null,
+(Public_Private_Indicator: payload.publicPrivateIndicator) when payload.publicPrivateIndicator != null,
+(Small_Business_Indicator: payload.smallBusinessIndicator) when payload.smallBusinessIndicator != null,
+(Local_Employee_Count: payload.localEmployeeCount) when payload.localEmployeeCount != null,
+(Minority_Owned_Indicator: payload.minorityOwnIndicator) when payload.minorityOwnIndicator != null,
+(Minority_Type: payload.minorityType) when payload.minorityType != null,
+(Women_Owned_Indicator: payload.womenOwnedIndicator) when payload.womenOwnedIndicator != null,
+(Legal_Status_Code: payload.legalStatusCode) when payload.legalStatusCode != null,
+(Manufacturing_Indicator: payload.manufacturingIndicator) when payload.manufacturingIndicator != null,
+(Subsidiary_Indicator: payload.subsidiaryIndicator) when payload.subsidiaryIndicator != null,
+(Website_URL: payload.websiteURL) when payload.websiteURL != null
+}]]></dw:set-variable>
 
         </dw:transform-message>
-        <db:insert config-ref="MIP_DB" doc:name="Database">
-            <db:parameterized-query><![CDATA[insert into MIPdb.cMDMIN.STD_Organization (Source_System, Source_Id, Batch_Id, 
-Reporting_Name, Legal_Name, Doing_Business_As_Name,
-DUNS_Number, Domestic_Ultimate_DUNS, Headquarter_DUNS, Parent_DUNS, Global_Ultimate_DUNS
-)
-Values (#[payload.Source_System], #[payload.Source_Id],#[payload.Batch_Id],
-#[payload.Reporting_Name], #[payload.Legal_Name],#[payload.Doing_Business_As_Name],
-#[payload.DUNS_Number],#[payload.Domestic_Ultimate_DUNS],#[payload.Headquarter_DUNS],#[payload.Parent_DUNS],#[payload.Global_Ultimate_DUNS])]]></db:parameterized-query>
-
-
-        </db:insert>
+        <flow-ref name="STD_Organization_Insert" doc:name="STD_Organization_Insert"/>
+        <flow-ref name="STD_Org_Identifier_Insert" doc:name="STD_Org_Identifier_Insert"/>
+        <flow-ref name="STD_Org_Phone_Insert" doc:name="STD_Org_Phone_Insert"/>
         <json:object-to-json-transformer doc:name="Object to JSON"/>
         <logger level="INFO" doc:name="Logger"/>
     </flow>
