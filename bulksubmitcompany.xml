@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+    <flow name="bulksubmitcompanyPostFlow">
+        <byte-array-to-string-transformer mimeType="application/json" doc:name="Byte Array to String"/>
+        <expression-component doc:name="Expression"><![CDATA[flowVars.ErrorExceptionInfo=null;
+flowVars.ORG_PayloadStr=payload;
+flowVars.batchType = "Bulk API";]]></expression-component>
+
+        <dw:transform-message doc:name="sourceSystem_ID">
+<!--             <dw:input-payload mimeType="application/json"/> -->
+            <dw:set-variable variableName="sourceSystem"><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0].sourceIdentifiers[0].sourceSystem]]></dw:set-variable>
+            <dw:set-variable variableName="sourceID"><![CDATA[%dw 1.0
+%output application/java
+---
+payload[0].sourceIdentifiers[0].id]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="SendBulkDataToIntakeTables" doc:name="SendDataToIntakeTables"/>
+        <flow-ref name="FlushBatch" doc:name="FlushBatch"/>
+    </flow>
+    <sub-flow name="SendBulkDataToIntakeTables">
+        <flow-ref name="SP_NewBatchID" doc:name="SP_NewBatchID"/>
+        <set-payload value="#[flowVars.ORG_PayloadStr]" mimeType="application/json" doc:name="Set Payload-ORG_PayloadStr"/>
+
+        <dw:transform-message doc:name="Create_ORG_Identifier_Phone">
+            <dw:set-variable variableName="STD_Org_Phone"><![CDATA[%dw 1.0
+%output application/java
+---
+flatten (
+payload map ((value , valueInd) -> 
+	(value.phone map ((ph, phInd) -> 
+		({
+		Source_System:value.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:value.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Phone_Type: ph.type match {"Business" -> "Business Telephone", "FAX" -> "Business FAX"},
+		Area_Code: ph.areaCode,
+		Number: ph.number,
+		(Country_Code: ph.countryCode) when ph.countryCode != null,
+		(Extension: ph.extension) when ph.extension != null,
+		(Exchange: ph.exchangeNumber) when ph.exchangeNumber != null,
+		(Standard_Indicator: ph.standardIndicator) when ph.standardIndicator != null	
+	})))
+))
+]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Org_Identifier"><![CDATA[%dw 1.0
+%output application/java
+---
+flatten (
+{	
+"duns" : payload filter ($.dunsNumber != null) map
+	($.dunsNumber  map ((duns, dunsIndex) ->  ({
+		Source_System:$.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:$.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Identifier_Type: duns.type match {
+			"DUNS Number" -> "DUNS Name",	
+			"Domestic Ultimate DUNS" -> "Domestic Ultimate DUNS Name",
+			"Headquarter DUNS" -> "Headquarter DUNS Name",
+			"Parent DUNS" -> "Parent DUNS Name",
+			"Global Ultimate DUNS" -> "Global Ultimate DUNS Name"
+		},
+		Identifier_Value: duns.Name,
+		Identifier_Source_System: $.sourceIdentifiers[0].sourceSystem,
+		Identifier_Desc: null 
+	}))),
+"indus" : payload filter ($.industry != null) map
+	($.industry map ((indus, indusIndex) ->  ({
+		Source_System:$.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:$.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Identifier_Type: indus.code,
+		Identifier_Value: indus.id,
+		Identifier_Source_System: indus.sourceType,
+		Identifier_Desc: indus.description
+	}))),
+"cn" : payload filter ($.contractNumber != null) map
+	($.contractNumber map ((cn, cnIndex) ->  ({
+		Source_System:$.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:$.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Identifier_Type: "Contract Number",
+		Identifier_Value: cn.number,
+		Identifier_Source_System: cn.sourceSystem,
+		Identifier_Desc: null
+	}))),
+"id" : payload filter ($.identifiers != null) map
+	($.identifiers map ((identifier, idIndex) ->  ({
+		Source_System:$.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:$.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Identifier_Type: identifier.type,
+		Identifier_Value: identifier.id,
+		Identifier_Source_System: identifier.sourceSystem,
+		Identifier_Desc: identifier.description
+	}))),
+"tax" :	payload filter (payload.taxid != null) map ([{
+		Source_System:$.sourceIdentifiers[0].sourceSystem, 
+		Source_Id:$.sourceIdentifiers[0].id, 
+		Batch_Id: flowVars.BATCHID,
+		Identifier_Type: 'Tax Identification Number',
+		Identifier_Value: $.taxid
+	}])
+} ) reduce ((curr, obj={}) -> obj ++ curr) filter ($.Identifier_Value != null)]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
+%output application/java
+---
+payload map using(nameArray = $.name, dunsNumberArray = $.dunsNumber)
+{
+Source_System:$.sourceIdentifiers[0].sourceSystem, 
+Source_Id:$.sourceIdentifiers[0].id, 
+Batch_Id:flowVars.BATCHID,  
+(nameArray map  {
+	(Reporting_Name: $.name) when $.type == "Reporting Name", 
+	(Legal_Name: $.name) when $.type == "Legal Name",
+	(Doing_Business_As_Name: $.name) when $.type == "Doing Business As"
+}),
+(dunsNumberArray map {
+	(DUNS_Number: $.id) when $.type == "DUNS Number",
+	(Domestic_Ultimate_DUNS: $.id) when $.type == "Domestic Ultimate DUNS",
+	(Headquarter_DUNS: $.id) when $.type == "Headquarter DUNS",
+	(Parent_DUNS: $.id) when $.type == "Parent DUNS",
+	(Global_Ultimate_DUNS: $.id) when $.type == "Global Ultimate DUNS"
+}),
+Phys_Address_Line1: $.address.physicaladdress.addressLine1,
+(Phys_Address_Line2: $.address.physicaladdress.addressLine2) when $.address.physicaladdress.addressLine2 != null,
+Phys_City: $.address.physicaladdress.city,
+Phys_State_Province: $.address.physicaladdress.stateProvince,
+Phys_Zip: $.address.physicaladdress.zip.zip5,
+Phys_Country: $.address.physicaladdress.country,
+(Phys_Building: $.address.physicaladdress.building) when $.address.physicaladdress.building != null,
+(Phys_Street: $.address.physicaladdress.street) when $.address.physicaladdress.street != null,
+(Mail_Address_Line1: $.address.mailingaddress.addressLine1) when $.address.mailingaddress !=null,
+(Mail_Address_Line2: $.address.mailingaddress.addressLine2) when $.address.mailingaddress.addressLine2 !=null,
+(Mail_City: $.address.mailingaddress.city) when $.address.mailingaddress !=null,
+(Mail_State_Province: $.address.mailingaddress.stateProvince) when $.address.mailingaddress !=null,
+(Mail_Zip: $.address.mailingaddress.zip.zip5) when $.address.mailingaddress !=null,
+(Mail_Country: $.address.mailingaddress.country) when $.address.mailingaddress !=null,
+(Mail_Building: $.address.mailingaddress.building) when $.address.mailingaddress.building !=null,
+(Mail_Street: $.address.mailingaddress.street) when $.address.mailingaddress.street !=null,
+(Established_Date: $.establishedDate) when $.establishedDate != null,
+(Total_Employee_Count: $.totalEmployeeCount) when $.totalEmployeeCount != null,
+(Estimated_Annual_Revenue: $.estimatedAnnualRevenue) when $.estimatedAnnualRevenue != null,
+(Currency_Type_Code: $.currencyTypeCode) when $.currencyTypeCode != null,
+(Public_Private_Indicator: $.publicPrivateIndicator) when $.publicPrivateIndicator != null,
+(Small_Business_Indicator: $.smallBusinessIndicator) when $.smallBusinessIndicator != null,
+(Local_Employee_Count: $.localEmployeeCount) when $.localEmployeeCount != null,
+(Minority_Owned_Indicator: $.minorityOwnIndicator) when $.minorityOwnIndicator != null,
+(Minority_Type: $.minorityType) when $.minorityType != null,
+(Women_Owned_Indicator: $.womenOwnedIndicator) when $.womenOwnedIndicator != null,
+(Legal_Status_Code: $.legalStatusCode) when $.legalStatusCode != null,
+(Manufacturing_Indicator: $.manufacturingIndicator) when $.manufacturingIndicator != null,
+(Subsidiary_Indicator: $.subsidiaryIndicator) when $.subsidiaryIndicator != null,
+(Website_URL: $.websiteURL) when $.websiteURL != null
+}]]></dw:set-variable>
+        </dw:transform-message>
+
+        <flow-ref name="STD_Organization_Insert" doc:name="STD_Organization_Insert"/>
+        <flow-ref name="STD_Org_Identifier_Insert" doc:name="STD_Org_Identifier_Insert"/>
+        <flow-ref name="STD_Org_Phone_Insert" doc:name="STD_Org_Phone_Insert"/>
+        <!-- 
+        <ee:xa-transactional action="ALWAYS_BEGIN" doc:name="Transactional">
+            <catch-exception-strategy doc:name="Catch Exception Strategy">
+                <expression-component doc:name="Expression"><![CDATA[flowVars.ErrorExceptionInfo = exception.message;
+]]></expression-component>
+                <flow-ref name="ThrowCompanyException" doc:name="ThrowCompanyException"/>
+            </catch-exception-strategy>
+        </ee:xa-transactional>
+ 		-->
+    </sub-flow>
+    
+</mule>
