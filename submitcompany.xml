@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:vm="http://www.mulesoft.org/schema/mule/vm" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:reltio="http://www.mulesoft.org/schema/mule/reltio" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/reltio http://www.mulesoft.org/schema/mule/reltio/current/mule-reltio.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd">
+    <flow name="submitcompanyPostFlow">
+        <byte-array-to-string-transformer mimeType="application/json" doc:name="Byte Array to String"/>
+        <expression-component doc:name="Expression"><![CDATA[flowVars.ErrorExceptionInfo=null;
+flowVars.ORG_PayloadStr=payload;
+flowVars.batchType = "API";]]></expression-component>
+
+        <dw:transform-message doc:name="sourceSystem_ID">
+<!--             <dw:input-payload mimeType="application/json"/> -->
+            <dw:set-variable variableName="sourceSystem"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.sourceIdentifiers[0].sourceSystem]]></dw:set-variable>
+            <dw:set-variable variableName="sourceID"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.sourceIdentifiers[0].id]]></dw:set-variable>
+        </dw:transform-message>
+        <flow-ref name="SendDataToIntakeTables" doc:name="SendDataToIntakeTables"/>
+        <flow-ref name="FlushBatch" doc:name="FlushBatch"/>
+        <flow-ref name="ReltioCreateCompany" doc:name="ReltioCreateCompany"/>
+    </flow>
+    <sub-flow name="SendDataToIntakeTables">
+        <flow-ref name="SP_NewBatchID" doc:name="SP_NewBatchID"/>
+        <set-payload value="#[flowVars.ORG_PayloadStr]" mimeType="application/json" doc:name="Set Payload-ORG_PayloadStr"/>
+
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-variable variableName="STD_Org_Phone"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.phone map {
+	Source_System:payload.sourceIdentifiers[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifiers[0].id, 
+	Batch_Id: flowVars.BATCHID,
+	Phone_Type: $.type match {"Business" -> "Business Telephone", "FAX" -> "Business FAX"},
+	Area_Code: $.areaCode,
+	Number: $.number,
+	(Country_Code: $.countryCode) when $.countryCode != null,
+	(Extension: $.extension) when $.extension != null,
+	(Exchange: $.exchangeNumber) when $.exchangeNumber != null,
+	(Standard_Indicator: $.standardIndicator) when $.standardIndicator != null
+}]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Org_Identifier"><![CDATA[%dw 1.0
+%output application/java
+---
+flatten [
+(payload.contractNumber map {
+	Source_System:payload.sourceIdentifiers[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifiers[0].id, 
+	Identifier_Type: "Contract Number",
+	Identifier_Value: $.number,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: $.sourceSystem,
+	Identifier_Desc: null
+}),
+(payload.identifiers map {
+	Source_System:payload.sourceIdentifiers[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifiers[0].id, 
+	Identifier_Type: $.type,
+	Identifier_Value: $.id,
+	Batch_Id: flowVars.BATCHID,
+	Identifier_Source_System: $.sourceSystem,
+	Identifier_Desc: $.description
+}),
+({
+	Source_System:payload.sourceIdentifiers[0].sourceSystem, 
+	Source_Id:payload.sourceIdentifiers[0].id, 
+	Identifier_Type: 'Tax Identification Number',
+	Identifier_Value: payload.taxid,
+	Batch_Id: flowVars.BATCHID
+}) when payload.taxid != null
+]]]></dw:set-variable>
+            <dw:set-variable variableName="STD_Organization"><![CDATA[%dw 1.0
+%output application/java
+---
+{
+Source_System:payload.sourceIdentifiers[0].sourceSystem, 
+Source_Id:payload.sourceIdentifiers[0].id, 
+Batch_Id:flowVars.BATCHID,  
+(payload.name map {
+	(Reporting_Name: $.name) when $.type == "Reporting Name", 
+	(Legal_Name: $.name) when $.type == "Legal Name",
+	(Doing_Business_As_Name: $.name) when $.type == "Doing Business As"
+}),
+Phys_Address_Line1: payload.address.physicaladdress.addressLine1,
+(Phys_Address_Line2: payload.address.physicaladdress.addressLine2) when payload.address.physicaladdress.addressLine2 != null,
+Phys_City: payload.address.physicaladdress.city,
+Phys_State_Province: payload.address.physicaladdress.stateProvince,
+Phys_Zip: payload.address.physicaladdress.zip.zip5,
+Phys_Country: payload.address.physicaladdress.country,
+(Phys_Building: payload.address.physicaladdress.building) when payload.address.physicaladdress.building != null,
+(Phys_Street: payload.address.physicaladdress.street) when payload.address.physicaladdress.street != null,
+(Mail_Address_Line1: payload.address.mailingaddress.addressLine1) when payload.address.mailingaddress !=null,
+(Mail_Address_Line2: payload.address.mailingaddress.addressLine2) when payload.address.mailingaddress.addressLine2 !=null,
+(Mail_City: payload.address.mailingaddress.city) when payload.address.mailingaddress !=null,
+(Mail_State_Province: payload.address.mailingaddress.stateProvince) when payload.address.mailingaddress !=null,
+(Mail_Zip: payload.address.mailingaddress.zip.zip5) when payload.address.mailingaddress !=null,
+(Mail_Country: payload.address.mailingaddress.country) when payload.address.mailingaddress !=null,
+(Mail_Building: payload.address.mailingaddress.building) when payload.address.mailingaddress.building !=null,
+(Mail_Street: payload.address.mailingaddress.street) when payload.address.mailingaddress.street !=null,
+(Website_URL: payload.websiteURL) when payload.websiteURL != null
+}]]></dw:set-variable>
+            <!--             <dw:input-payload mimeType="application/json"/> -->
+        </dw:transform-message>
+
+        <flow-ref name="STD_Organization_Insert" doc:name="STD_Organization_Insert"/>
+        <flow-ref name="STD_Org_Identifier_Insert" doc:name="STD_Org_Identifier_Insert"/>
+        <flow-ref name="STD_Org_Phone_Insert" doc:name="STD_Org_Phone_Insert"/>
+        <!-- 
+        <ee:xa-transactional action="ALWAYS_BEGIN" doc:name="Transactional">
+            <catch-exception-strategy doc:name="Catch Exception Strategy">
+                <expression-component doc:name="Expression"><![CDATA[flowVars.ErrorExceptionInfo = exception.message;
+]]></expression-component>
+                <flow-ref name="ThrowCompanyException" doc:name="ThrowCompanyException"/>
+            </catch-exception-strategy>
+        </ee:xa-transactional>
+ 		-->
+    </sub-flow>
+    <sub-flow name="ReltioCreateCompany">
+        <set-payload value="#[flowVars.ORG_PayloadStr]" doc:name="Set Payload (ORG_PayloadStr)" mimeType="application/json"/>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:input-payload mimeType="application/json"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+[{
+	"type": "configuration/entityTypes/Company",
+	"attributes": {
+		"SourceIdentifiers": [{
+			"value": {
+				"ID": [{
+					"value": payload.sourceIdentifiers[0].id
+				}],
+				"SourceSystem": [{
+					"value": payload.sourceIdentifiers[0].sourceSystem
+				}]
+			}
+		}],
+		"Name" : (payload.name map {
+			"value": {
+				"Type": [{
+					"value": $.type
+				}],
+				"Name": [{
+					"value": $.name
+				}]
+			}
+		}),
+		"PhysicalAddress": [{
+			"value": {
+				"AddressLine1": [{
+					"value": payload.address.physicaladdress.addressLine1
+				}],
+				("AddressLine2": [{
+					"value": payload.address.physicaladdress.addressLine2
+				}]) when payload.address.physicaladdress.addressLine2 != null,
+				"City": [{
+					"value": payload.address.physicaladdress.city
+				}],
+				"StateProvince": [{
+					"value": payload.address.physicaladdress.stateProvince
+				}],
+				"Zip": [{
+					"value": {
+						"Zip5": [{
+							"value": payload.address.physicaladdress.zip.zip5
+						}]
+					}
+				}],
+				"Country": [{
+					"value": payload.address.physicaladdress.country
+				}],
+				("Building": [{
+					"value": payload.address.physicaladdress.building
+				}]) when payload.address.physicaladdress.building != null,
+				("Street": [{
+					"value": payload.address.physicaladdress.street
+				}]) when payload.address.physicaladdress.street != null,
+				"SRCIDTYPE": [{
+					"value": payload.sourceIdentifiers[0].sourceSystem
+				}]
+			},
+			"refEntity": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "surrogate"
+				} ]
+			},
+			"refRelation": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "R" ++ payload.sourceIdentifiers[0].id ++ "Address" ++ randomAlphanumeric(8)
+				} ]
+			}
+		}],
+		"MailingAddress": [{
+			"value": {
+				"AddressLine1": [{
+					"value": payload.address.mailingaddress.addressLine1
+				}],
+				("AddressLine2": [{
+					"value": payload.address.mailingaddress.addressLine2
+				}]) when payload.address.mailingaddress.addressLine2 != null,
+				"City": [{
+					"value": payload.address.mailingaddress.city
+				}],
+				"StateProvince": [{
+					"value": payload.address.mailingaddress.stateProvince
+				}],
+				"Zip": [{
+					"value": {
+						"Zip5": [{
+							"value": payload.address.mailingaddress.zip.zip5
+						}]
+					}
+				}],
+				"Country": [{
+					"value": payload.address.mailingaddress.country
+				}],
+				("Building": [{
+					"value": payload.address.mailingaddress.building
+				}]) when payload.address.mailingaddress.building != null,
+				("Street": [{
+					"value": payload.address.mailingaddress.street
+				}]) when payload.address.mailingaddress.street != null,
+				"SRCIDTYPE": [{
+					"value": payload.sourceIdentifiers[0].sourceSystem
+				}]
+			},
+			"refEntity": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "surrogate"
+				} ]
+			},
+			"refRelation": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "R" ++ payload.sourceIdentifiers[0].id ++ "Address" ++ randomAlphanumeric(8)
+				} ]
+			}
+		}],
+		"Address": [
+		{
+			"value": {
+				"AddressLine1": [{
+					"value": payload.address.physicaladdress.addressLine1
+				}],
+				("AddressLine2": [{
+					"value": payload.address.physicaladdress.addressLine2
+				}]) when payload.address.physicaladdress.addressLine2 != null,
+				"City": [{
+					"value": payload.address.physicaladdress.city
+				}],
+				"StateProvince": [{
+					"value": payload.address.physicaladdress.stateProvince
+				}],
+				"Zip": [{
+					"value": {
+						"Zip5": [{
+							"value": payload.address.physicaladdress.zip.zip5
+						}]
+					}
+				}],
+				"Country": [{
+					"value": payload.address.physicaladdress.country
+				}],
+				("Building": [{
+					"value": payload.address.physicaladdress.building
+				}]) when payload.address.physicaladdress.building != null,
+				("Street": [{
+					"value": payload.address.physicaladdress.street
+				}]) when payload.address.physicaladdress.street != null,
+				"SRCIDTYPE": [{
+					"value": payload.sourceIdentifiers[0].sourceSystem
+				}],
+				"AddressType": [{
+					"value": "Physical"
+				}]
+			},
+			"refEntity": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "surrogate"
+				} ]
+			},
+			"refRelation": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "R" ++ payload.sourceIdentifiers[0].id ++ "Address" ++ randomAlphanumeric(8)
+				} ]
+			}
+		},
+		{
+			"value": {
+				"AddressLine1": [{
+					"value": payload.address.mailingaddress.addressLine1
+				}],
+				("AddressLine2": [{
+					"value": payload.address.mailingaddress.addressLine2
+				}]) when payload.address.mailingaddress.addressLine2 != null,
+				"City": [{
+					"value": payload.address.mailingaddress.city
+				}],
+				"StateProvince": [{
+					"value": payload.address.mailingaddress.stateProvince
+				}],
+				"Zip": [{
+					"value": {
+						"Zip5": [{
+							"value": payload.address.mailingaddress.zip.zip5
+						}]
+					}
+				}],
+				"Country": [{
+					"value": payload.address.mailingaddress.country
+				}],
+				("Building": [{
+					"value": payload.address.mailingaddress.building
+				}]) when payload.address.mailingaddress.building != null,
+				("Street": [{
+					"value": payload.address.mailingaddress.street
+				}]) when payload.address.mailingaddress.street != null,
+				"SRCIDTYPE": [{
+					"value": payload.sourceIdentifiers[0].sourceSystem
+				}],
+				"AddressType": [{
+					"value": "Mailing"
+				}]
+			},
+			"refEntity": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "surrogate"
+				} ]
+			},
+			"refRelation": {
+				"crosswalks": [ {
+					"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+					"value": "R" ++ payload.sourceIdentifiers[0].id ++ "Address" ++ randomAlphanumeric(8)
+				} ]
+			}
+		}
+	],
+	("Phone": payload.phone map {
+		   "value":{
+			  "SourceType":[{"value":payload.sourceIdentifiers[0].sourceSystem}],
+			  "Extension":[{"value":$.extension}],
+			  "StandardIndicator":[{"value":$.standardIndicator}],
+			  "Type":[{"value":$.type}],
+			  "Number":[{"value":$.number}],
+			  "AreaCode":[{"value":$.areaCode}],
+			  "ExchangeNumber":[{"value":$.exchangeNumber}],
+			  "CountryCode":[{"value":$.countryCode}]
+		   } 
+		 })  when payload.phone != null,
+	("WebsiteURL":[{"value":payload.websiteURL}]) when payload.websiteURL != null,
+	("TaxID":[{"value":payload.taxid}]) when payload.taxid != null,
+	("Identifiers": payload.identifiers map {
+		   "value":{
+			  "Type":[{"value":$.type}],
+			  "ID":[{"value":$.id}],
+			  "IdentifierSource":[{"value":$.sourceSystem}]
+		   }
+		}) when payload.identifiers != null,
+	("ContractNumber": payload.contractNumber map {
+		   "value":{
+			  "Number":[{ "value":$.number }],
+			  "SourceSystem":[{ "value":$.sourceSystem }]
+		   }
+		}) when payload.contractNumber != null
+	},
+	"crosswalks": [{
+		"type": "configuration/sources/" ++ payload.sourceIdentifiers[0].sourceSystem,
+		"value": payload.sourceIdentifiers[0].id
+	}]
+}]]]></dw:set-payload>
+        </dw:transform-message>
+
+        <reltio:create-entities config-ref="Reltio__Configuration" entityType="configuration/entityTypes/Company" doc:name="Reltio">
+            <reltio:entity-data ref="#[payload]"/>
+        </reltio:create-entities>
+        <choice doc:name="successful?">
+            <when expression="payload[0].successful != true">
+                <dw:transform-message doc:name="Fail-ReltioResponse">
+                    <dw:set-variable variableName="ReltioResponse"><![CDATA[%dw 1.0
+%output application/json
+---
+{ 
+'status' : 'Fail', 
+'message' : 'Error while calling Reltio for BatchID  ' ++ flowVars.BATCHID 
+}
+]]></dw:set-variable>
+                </dw:transform-message>
+            </when>
+            <otherwise>
+                <dw:transform-message doc:name="Success-ReltioResponse">
+                    <dw:set-variable variableName="ReltioResponse"><![CDATA[%dw 1.0
+%output application/json
+---
+{ 
+'status' : 'Success', 
+'message' : 'uri = ' ++ payload[0].object.uri ++ ', createdTime = ' ++ payload[0].object.createdTime ++ ', updatedTime = ' ++ payload[0].object.updatedTime ++ ', BatchID = ' ++ flowVars.BATCHID 
+}]]></dw:set-variable>
+                </dw:transform-message>
+            </otherwise>
+        </choice>
+        <set-payload value="#[['Batch_Id': flowVars.BATCHID, 'API_Call_Status': (payload[0].successful ? &quot;Success&quot; : &quot;Fail&quot;)]]" doc:name="Set VM Payload"/>
+        <vm:outbound-endpoint exchange-pattern="one-way" path="updateAPICallStatus" connector-ref="ESBVM" doc:name="VM-updateAPICallStatus"/>
+        <set-payload value="#[flowVars.ReltioResponse]" doc:name="Set Payload"/>
+
+
+    </sub-flow>
+    <flow name="submitcompanyPostFlowORG">
+        <expression-component doc:name="Expression"><![CDATA[flowVars.ErrorExceptionInfo=null;]]></expression-component>
+        <flow-ref name="ValidatePayloadWithCompanySchema" doc:name="ValidatePayloadWithCompanySchema"/>
+        <choice doc:name="Choice-ErrorExceptionInfo">
+            <when expression="#[flowVars.ErrorExceptionInfo != null]">
+                <flow-ref name="ThrowCompanyException" doc:name="ThrowCompanyException"/>
+            </when>
+            <otherwise>
+                <expression-component doc:name="Expression"><![CDATA[flowVars.ORG_PayloadStr=payload;
+
+]]></expression-component>
+                <dw:transform-message doc:name="sourceSystem_ID">
+                    <dw:input-payload mimeType="application/json"/>
+                    <dw:set-variable variableName="sourceSystem"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.sourceIdentifiers[0].sourceSystem]]></dw:set-variable>
+                    <dw:set-variable variableName="sourceID"><![CDATA[%dw 1.0
+%output application/java
+---
+payload.sourceIdentifiers[0].id]]></dw:set-variable>
+                </dw:transform-message>
+                <flow-ref name="SendDataToIntakeTables" doc:name="SendDataToIntakeTables"/>
+                <flow-ref name="FlushBatch" doc:name="FlushBatch"/>
+        		<flow-ref name="ReltioCreateCompany" doc:name="ReltioCreateCompany"/>
+            </otherwise>
+        </choice>
+
+    </flow>
+</mule>
